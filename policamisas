@@ -1,0 +1,654 @@
+import mysql.connector
+from mysql.connector import Error
+
+# Función de conexión a la base de datos
+def conectar_db():
+    """Función para establecer la conexión con la base de datos."""
+    try:
+        conexion = mysql.connector.connect(
+            user='root', #no cambia
+            password='Colombia*2004', #la que tengas puesta tu
+            host="localhost", # no cambia
+            database="Bd_camisetas", #  no cambia
+            port="3306" # no cambia pero revisa
+        )
+
+        if conexion.is_connected():
+            print("Conexión exitosa")
+            return conexion
+    except Error as ex:
+        print("Error durante la conexión: ", ex)
+        return None
+
+# Clase Cliente
+class Cliente:
+    def __init__(self, nombre, email, contraseña):
+        self.nombre = nombre
+        self.email = email
+        self.contraseña = contraseña
+
+    @staticmethod
+    def login(email, contraseña):
+        conexion = conectar_db()
+        if conexion:
+            cursor = conexion.cursor(dictionary=True)
+            query = "SELECT * FROM cliente WHERE email=%s AND contraseña=%s"
+            cursor.execute(query, (email, contraseña))
+            user_data = cursor.fetchone()
+            cursor.close()
+            conexion.close()
+            if user_data:
+                return Cliente(user_data['nombre'], user_data['email'], user_data['contraseña'])
+        return None
+
+    @staticmethod
+    def crear_cliente(nombre, email, contraseña):
+        conexion = conectar_db()
+        if conexion:
+            cursor = conexion.cursor()
+            query = "INSERT INTO cliente (nombre, email, contraseña, fecha_registro, estado) VALUES (%s, %s, %s, CURDATE(), 'activo')"
+            cursor.execute(query, (nombre, email, contraseña))
+            conexion.commit()
+            cursor.close()
+            conexion.close()
+            print("Cliente creado exitosamente.")
+
+# Clase Administrador
+class Administrador:
+    def __init__(self, nombre, contraseña):
+        self.nombre = nombre
+        self.contraseña = contraseña
+
+    @staticmethod
+    def login(nombre, contraseña):
+        conexion = conectar_db()
+        if conexion:
+            cursor = conexion.cursor(dictionary=True)
+            query = "SELECT * FROM Administrador WHERE nombre=%s AND contraseña=%s"
+            cursor.execute(query, (nombre, contraseña))
+            admin_data = cursor.fetchone()
+            cursor.close()
+            conexion.close()
+            if admin_data:
+                return Administrador(admin_data['nombre'], admin_data['contraseña'])
+        return None
+
+# Función para verificar si ya existe un administrador
+def verificar_administrador():
+    conexion = conectar_db()
+    if conexion:
+        cursor = conexion.cursor()
+        query = "SELECT COUNT(*) FROM Administrador"
+        cursor.execute(query)
+        tiene_admin = cursor.fetchone()[0] > 0
+        cursor.close()
+        conexion.close()
+        return tiene_admin
+
+# Función para crear un administrador inicial
+def crear_administrador(nombre, contraseña):
+    conexion = conectar_db()
+    if conexion:
+        cursor = conexion.cursor()
+        query = "INSERT INTO Administrador (nombre, contraseña) VALUES (%s, %s)"
+        cursor.execute(query, (nombre, contraseña))
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        print("Administrador creado exitosamente.")
+
+# Función principal del menú
+def menu_principal():
+    while True:
+        print("\nBienvenido al sistema de gestión.")
+        print("1. Iniciar sesión como administrador")
+        print("2. Iniciar sesión como cliente")
+        print("3. Crear cliente")
+        print("4. Crear administrador")
+        print("5. Salir")
+
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == "1":
+            nombre = input("Ingrese su nombre de administrador: ")
+            contraseña = input("Ingrese su contraseña: ")
+            admin = Administrador.login(nombre, contraseña)
+            if admin:
+                print(f"Bienvenido, {admin.nombre}. Has iniciado sesión como administrador.")
+                # Llama al menú administrador para comenzar
+                menu_administrador()
+            else:
+                print("Credenciales de administrador incorrectas.")
+
+        elif opcion == "2":
+            email = input("Ingrese su email: ")
+            contraseña = input("Ingrese su contraseña: ")
+            cliente = Cliente.login(email, contraseña)
+            if cliente:
+                print(f"Bienvenido, {cliente.nombre}. Has iniciado sesión como cliente.")
+                menu_usuario()
+
+
+            else:
+                print("Credenciales de cliente incorrectas.")
+
+        elif opcion == "3":
+            nombre = input("Ingrese su nombre: ")
+            email = input("Ingrese su email: ")
+            contraseña = input("Ingrese su contraseña: ")
+            Cliente.crear_cliente(nombre, email, contraseña)
+
+        elif opcion == "4":
+            if verificar_administrador():
+                print("Ya existe un administrador en el sistema.")
+            else:
+                nombre = input("Ingrese el nombre del nuevo administrador: ")
+                contraseña = input("Ingrese la contraseña del nuevo administrador: ")
+                crear_administrador(nombre, contraseña)
+
+        elif opcion == "5":
+            print("Saliendo del sistema. Hasta luego.")
+            break
+
+        else:
+            print("Opción no válida. Intente de nuevo.")
+
+
+
+
+def menu_administrador():
+    while True:
+        print("\n--- Menú Administrador ---")
+        print("1. Ventas")
+        print("2. Gestión de Camisetas")
+        print("3. Gestión de Estampas")
+        print("4. Consultar Detalles de Venta")
+        print("5. Consultar Comentarios")
+        print("6. Administrar artistas")
+        print("7. Salir")
+        
+        opcion = input("Selecciona una opción: ")
+        if opcion == '1':
+            menu_ventas()
+        if opcion == '2':
+            menu_camisetas()
+        elif opcion == '3':
+            menu_estampas()
+        elif opcion == '4':
+            consultar_detalles_venta()
+        elif opcion == '5':
+            consultar_comentarios()
+        elif opcion == '6':
+            Administrar_artistas()
+        elif opcion == '7':
+            print("Saliendo...")
+            break
+        else:
+            print("Opción inválida. Intenta de nuevo.")
+
+def menu_camisetas():
+    while True:
+        print("\n--- Gestión de Camisetas ---")
+        print("1. Consultar Camisetas")
+        print("2. Insertar Camiseta")
+        print("3. Modificar Camiseta")
+        print("4. Eliminar Camiseta")
+        print("5. Volver al Menú Principal")
+        
+        opcion = input("Selecciona una opción: ")
+
+        if opcion == '1':
+            consultar_camisetas()
+        elif opcion == '2':
+            insertar_camiseta()
+        elif opcion == '3':
+            modificar_camiseta()
+        elif opcion == '4':
+            eliminar_camiseta()
+        elif opcion == '5':
+            break
+        else:
+            print("Opción inválida. Intenta de nuevo.")
+
+def menu_estampas():
+    while True:
+        print("\n--- Gestión de Estampas ---")
+        print("1. Consultar Estampas")
+        print("2. Insertar Estampa")
+        print("3. Modificar Estampa")
+        print("4. Eliminar Estampa")
+        print("5. Volver al Menú Principal")
+        
+        opcion = input("Selecciona una opción: ")
+
+        if opcion == '1':
+            consultar_estampas()
+        elif opcion == '2':
+            insertar_estampa()
+        elif opcion == '3':
+            modificar_estampa()
+        elif opcion == '4':
+            eliminar_estampa()
+        elif opcion == '5':
+            break
+        else:
+            print("Opción inválida. Intenta de nuevo.")
+
+
+def consultar_camisetas():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM Camisetas")
+    camisetas = cursor.fetchall()
+    print("Las camisetas:")
+    for camiseta in camisetas:
+        print(camiseta)
+    cursor.close()
+    conexion.close()
+
+def insertar_camiseta():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    nombre = input("Nombre de la camiseta: ")
+    descripcion = input("Descripción de la camiseta: ")
+    precio = float(input("Precio de la camiseta: "))
+    material = input("Material de la camiseta: ")
+    color = input("Color de la camiseta: ")
+    talla = input("Talla de la camiseta (S, M, L, XL, XXL): ")
+    stock = int(input("Cantidad en stock: "))
+    fecha_creacion = input("Fecha de creación (YYYY-MM-DD): ")
+
+    cursor.execute(
+        "INSERT INTO Camisetas (nombre, descripcion, precio, material, color, talla, stock, fecha_creacion) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (nombre, descripcion, precio, material, color, talla, stock, fecha_creacion)
+    )
+    
+    conexion.commit()
+    print("Camiseta insertada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def modificar_camiseta():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    camiseta_id = int(input("ID de la camiseta a modificar: "))
+    
+    print("¿Qué deseas modificar?")
+    print("1. Nombre")
+    print("2. Descripción")
+    print("3. Precio")
+    print("4. Material")
+    print("5. Color")
+    print("6. Talla")
+    print("7. Stock")
+    print("8. Fecha de creación")
+    
+    opcion = input("Selecciona una opción: ")
+    
+    if opcion == '1':
+        nuevo_nombre = input("Nuevo nombre: ")
+        cursor.execute("UPDATE Camisetas SET nombre = %s WHERE camiseta_id = %s", (nuevo_nombre, camiseta_id))
+    elif opcion == '2':
+        nueva_descripcion = input("Nueva descripción: ")
+        cursor.execute("UPDATE Camisetas SET descripcion = %s WHERE camiseta_id = %s", (nueva_descripcion, camiseta_id))
+    elif opcion == '3':
+        nuevo_precio = float(input("Nuevo precio: "))
+        cursor.execute("UPDATE Camisetas SET precio = %s WHERE camiseta_id = %s", (nuevo_precio, camiseta_id))
+    elif opcion == '4':
+        nuevo_material = input("Nuevo material: ")
+        cursor.execute("UPDATE Camisetas SET material = %s WHERE camiseta_id = %s", (nuevo_material, camiseta_id))
+    elif opcion == '5':
+        nuevo_color = input("Nuevo color: ")
+        cursor.execute("UPDATE Camisetas SET color = %s WHERE camiseta_id = %s", (nuevo_color, camiseta_id))
+    elif opcion == '6':
+        nueva_talla = input("Nueva talla (S, M, L, XL, XXL): ")
+        cursor.execute("UPDATE Camisetas SET talla = %s WHERE camiseta_id = %s", (nueva_talla, camiseta_id))
+    elif opcion == '7':
+        nuevo_stock = int(input("Nuevo stock: "))
+        cursor.execute("UPDATE Camisetas SET stock = %s WHERE camiseta_id = %s", (nuevo_stock, camiseta_id))
+    elif opcion == '8':
+        nueva_fecha = input("Nueva fecha de creación (YYYY-MM-DD): ")
+        cursor.execute("UPDATE Camisetas SET fecha_creacion = %s WHERE camiseta_id = %s", (nueva_fecha, camiseta_id))
+    
+    conexion.commit()
+    print("Camiseta modificada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def eliminar_camiseta():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    camiseta_id = int(input("ID de la camiseta a eliminar: "))
+    cursor.execute("DELETE FROM Camisetas WHERE camiseta_id = %s", (camiseta_id,))
+    
+    conexion.commit()
+    print("Camiseta eliminada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def consultar_estampas():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM Estampas")
+    print("Las estampas: ")
+    estampas = cursor.fetchall()
+    for estampa in estampas:
+        print(estampa)
+    cursor.close()
+    conexion.close()
+
+def insertar_estampa():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    artista_id = int(input("ID del artista: "))
+    nombre = input("Nombre de la estampa: ")
+    descripcion = input("Descripción de la estampa: ")
+    categoria = input("Categoría de la estampa: ")
+    popularidad = int(input("Nivel de popularidad: "))
+    rating = float(input("Calificación promedio: "))
+    fecha_subida = input("Fecha de subida (YYYY-MM-DD): ")
+    estado = input("Estado de la estampa (disponible/no disponible): ")
+
+    cursor.execute(
+        "INSERT INTO Estampas (artista_id, nombre, descripcion, categoria, popularidad, rating, fecha_subida, estado) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (artista_id, nombre, descripcion, categoria, popularidad, rating, fecha_subida, estado)
+    )
+    
+    conexion.commit()
+    print("Estampa insertada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def modificar_estampa():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    estampa_id = int(input("ID de la estampa a modificar: "))
+    
+    print("¿Qué deseas modificar?")
+    print("1. Nombre")
+    print("2. Descripción")
+    print("3. Categoría")
+    print("4. Popularidad")
+    print("5. Rating")
+    print("6. Estado")
+    
+    opcion = input("Selecciona una opción: ")
+    
+    if opcion == '1':
+        nuevo_nombre = input("Nuevo nombre: ")
+        cursor.execute("UPDATE Estampas SET nombre = %s WHERE estampa_id = %s", (nuevo_nombre, estampa_id))
+    elif opcion == '2':
+        nueva_descripcion = input("Nueva descripción: ")
+        cursor.execute("UPDATE Estampas SET descripcion = %s WHERE estampa_id = %s", (nueva_descripcion, estampa_id))
+    elif opcion == '3':
+        nueva_categoria = input("Nueva categoría: ")
+        cursor.execute("UPDATE Estampas SET categoria = %s WHERE estampa_id = %s", (nueva_categoria, estampa_id))
+    elif opcion == '4':
+        nueva_popularidad = int(input("Nuevo nivel de popularidad: "))
+        cursor.execute("UPDATE Estampas SET popularidad = %s WHERE estampa_id = %s", (nueva_popularidad, estampa_id))
+    elif opcion == '5':
+        nuevo_rating = float(input("Nuevo rating: "))
+        cursor.execute("UPDATE Estampas SET rating = %s WHERE estampa_id = %s", (nuevo_rating, estampa_id))
+    elif opcion == '6':
+        nuevo_estado = input("Nuevo estado (disponible/no disponible): ")
+        cursor.execute("UPDATE Estampas SET estado = %s WHERE estampa_id = %s", (nuevo_estado, estampa_id))
+    
+    conexion.commit()
+    print("Estampa modificada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def eliminar_estampa():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    estampa_id = int(input("ID de la estampa a eliminar: "))
+    cursor.execute("DELETE FROM Estampas WHERE estampa_id = %s", (estampa_id,))
+    
+    conexion.commit()
+    print("Estampa eliminada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def consultar_detalles_venta():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    print("los detalles de ventas: ")
+    cursor.execute("SELECT * FROM Detalles_Venta")
+    detalles = cursor.fetchall()
+    for detalle in detalles:
+        print(detalle)
+    cursor.close()
+    conexion.close()
+
+def consultar_comentarios():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    print("Los comentarios: ")
+    cursor.execute("SELECT * FROM Comentarios")
+    comentarios = cursor.fetchall()  # Recuperar todos los comentarios
+    
+    for comentario in comentarios:
+        
+    
+        print(comentario)  # Imprimir cada comentario
+
+        cursor.close()  # Cerrar el cursor
+        conexion.close()  # Cerrar la conexión
+
+def agregar_artista(nombre):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = "INSERT INTO Artista (nombre) VALUES (%s)"
+    cursor.execute(sql, (nombre,))
+    conexion.commit()  # Confirmar la transacción
+    print("Artista agregado con éxito.")
+    cursor.close()
+    conexion.close()
+
+def modificar_artista(artista_id, nuevo_nombre):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = "UPDATE Artista SET nombre = %s WHERE Artista_id = %s"
+    cursor.execute(sql, (nuevo_nombre, artista_id))
+    conexion.commit()  # Confirmar la transacción
+    if cursor.rowcount > 0:
+        print("Artista modificado con éxito.")
+    else:
+        print("No se encontró el artista con ese ID.")
+    cursor.close()
+    conexion.close()
+
+def eliminar_artista(artista_id):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = "DELETE FROM Artista WHERE Artista_id = %s"
+    cursor.execute(sql, (artista_id,))
+    conexion.commit()  # Confirmar la transacción
+    if cursor.rowcount > 0:
+        print("Artista eliminado con éxito.")
+    else:
+        print("No se encontró el artista con ese ID.")
+    cursor.close()
+    conexion.close()
+
+def consultar_artistas():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    print("Los artistas: ")
+    cursor.execute("SELECT * FROM Artista")
+    artistas = cursor.fetchall()  # Recuperar todos los artistas
+
+    for artista in artistas:
+        print(artista)  # Imprimir cada artista
+
+    cursor.close()  # Cerrar el cursor
+    conexion.close()  # Cerrar la conexión
+
+
+def Administrar_artistas():
+    while True:
+        print("1. Agregar Artista")
+        print("2. Modificar Artista")
+        print("3. Eliminar Artista")
+        print("4. Consultar Artistas")
+        print("5. Salir")
+
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == '1':
+            nombre = input("Ingrese el nombre del artista: ")
+            agregar_artista(nombre)
+        elif opcion == '2':
+            artista_id = int(input("Ingrese el ID del artista a modificar: "))
+            nuevo_nombre = input("Ingrese el nuevo nombre del artista: ")
+            modificar_artista(artista_id, nuevo_nombre)
+        elif opcion == '3':
+            artista_id = int(input("Ingrese el ID del artista a eliminar: "))
+            eliminar_artista(artista_id)
+        elif opcion == '4':
+            consultar_artistas()
+        elif opcion == '5':
+            print("Saliendo...")
+            break
+        else:
+            print("Opción no válida, intente nuevamente.")
+
+
+def agregar_venta(cliente_id, fecha_venta, total, estado, metodo_pago):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = """
+    INSERT INTO Ventas (cliente_id, fecha_venta, total, estado, metodo_pago)
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    cursor.execute(sql, (cliente_id, fecha_venta, total, estado, metodo_pago))
+    conexion.commit()  # Confirmar la transacción
+    print("Venta agregada con éxito.")
+    cursor.close()
+    conexion.close()
+
+def eliminar_venta(venta_id):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = "DELETE FROM Ventas WHERE venta_id = %s"
+    cursor.execute(sql, (venta_id,))
+    conexion.commit()  # Confirmar la transacción
+    if cursor.rowcount > 0:
+        print("Venta eliminada con éxito.")
+    else:
+        print("No se encontró la venta con ese ID.")
+    cursor.close()
+    conexion.close()
+
+def consultar_ventas():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM Ventas")
+    ventas = cursor.fetchall()  # Recuperar todas las ventas
+
+    for venta in ventas:
+        print(venta)  # Imprimir cada venta
+
+    cursor.close()  # Cerrar el cursor
+    conexion.close()  # Cerrar la conexión
+
+
+def menu_ventas():
+    while True:
+        print("1. Agregar Venta")
+        print("2. Eliminar Venta")
+        print("3. Consultar Ventas")
+        print("4. Salir")
+
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == '1':
+            cliente_id = int(input("Ingrese el ID del cliente: "))
+            fecha_venta = input("Ingrese la fecha de la venta (YYYY-MM-DD): ")
+            total = float(input("Ingrese el total de la venta: "))
+            estado = input("Ingrese el estado de la venta (en proceso/completada/cancelada): ")
+            metodo_pago = input("Ingrese el método de pago (tarjeta de crédito/PSE/efectivo): ")
+            agregar_venta(cliente_id, fecha_venta, total, estado, metodo_pago)
+        elif opcion == '2':
+            venta_id = int(input("Ingrese el ID de la venta a eliminar: "))
+            eliminar_venta(venta_id)
+        elif opcion == '3':
+            consultar_ventas()
+        elif opcion == '4':
+            print("Saliendo...")
+            break
+        else:
+            print("Opción no válida, intente nuevamente.")
+
+def agregar_comentario(estampa_id, usuario_id, comentario, fecha_comentario, rating=None):
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    sql = """
+    INSERT INTO Comentarios (estampa_id, usuario_id, comentario, fecha_comentario, rating)
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    cursor.execute(sql, (estampa_id, usuario_id, comentario, fecha_comentario, rating))
+    conexion.commit()  # Confirmar la transacción
+    print("Comentario agregado con éxito.")
+    cursor.close()
+    conexion.close()
+
+def consultar_comentarios():
+    conexion = conectar_db()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM Comentarios")
+    comentarios = cursor.fetchall()  # Recuperar todos los comentarios
+
+    for comentario in comentarios:
+        print(comentario)  # Imprimir cada comentario
+
+    cursor.close()  # Cerrar el cursor
+    conexion.close()  # Cerrar la conexión
+
+def menu_comentarios():
+    while True:
+        print("1. Agregar Comentario")
+        print("2. Consultar Comentarios")
+        print("3. Salir")
+
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == '1':
+            estampa_id = int(input("Ingrese el ID de la estampa: "))
+            usuario_id = int(input("Ingrese el ID del usuario: "))
+            comentario = input("Ingrese su comentario: ")
+            fecha_comentario = input("Ingrese la fecha del comentario (YYYY-MM-DD): ")
+            rating = input("Ingrese la calificación (opcional, presione Enter para omitir): ")
+            rating = float(rating) if rating else None  # Convertir a float o None
+            agregar_comentario(estampa_id, usuario_id, comentario, fecha_comentario, rating)
+        elif opcion == '2':
+            consultar_comentarios()
+        elif opcion == '3':
+            print("Saliendo...")
+            break
+        else:
+            print("Opción no válida, intente nuevamente.")
+
+def menu_usuario():
+    while True:
+        print("1. Ver camisetas")
+        print("2. comentarios")
+        print("3. Salir")
+
+        opcion = input("Seleccione una opción: ")
+
+        if opcion == '1':
+            consultar_camisetas()
+        elif opcion == '2':
+            menu_comentarios()
+        elif opcion == '3':
+            print("Saliendo...")
+            break
+        else:
+            print("Opción no válida, intente nuevamente.")
+
+# Punto de entrada del programa
+if __name__ == "__main__":
+    menu_principal()
